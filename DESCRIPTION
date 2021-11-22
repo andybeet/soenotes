@@ -23,7 +23,8 @@ Suggests:
     here,
     stocksmart,
     knitr,
-    readr
+    readr,
+    bookdown
 Remotes:
     NOAA-EDAB/comlandr,
     NOAA-EDAB/stocksmart
