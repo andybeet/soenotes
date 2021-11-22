@@ -25,4 +25,5 @@ Suggests:
     knitr,
     readr
 Remotes:
-    NOAA-EDAB/comlandr
+    NOAA-EDAB/comlandr,
+    NOAA-EDAB/stocksmart
