@@ -24,3 +24,5 @@ Suggests:
     stocksmart,
     knitr,
     readr
+Remotes:
+    NOAA-EDAB/comlandr
