@@ -1,0 +1,351 @@
+---
+title: "Comparison of Landings/Catch data"
+output:
+  html_document: default
+bibliography: references.bib
+csl: apa-annotated-bibliography.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+options(warn = -1) 
+```
+
+We investigate the landings/catch time series for the NEUS shelf. Data sources include:
+
+* @link_evidence_2021 uses data from @reg_a_watson_database_2017 
+* [Sea around us](http://www.seaaroundus.org/data/#/lme/7?chart=catch-chart&dimension=taxon&measure=tonnage&limit=10)
+* NEFSC database
+* [NAFO](https://www.nafo.int/Data/Catch-Statistics)
+* [Stocksmart](https://noaa-edab.github.io/stocksmart/)
+
+
+
+All plots of landings are on the same scale
+
+## Link paper 2021 vs Sea Around us
+
+In a recent paper, @link_evidence_2021 showed a figure depicting catch from the NEUS region from 1950-2014. This catch time series represents all reported catch from every taxa in addition to estimated illegal and unreported landings. The methods of collection and interpolation are referenced in @reg_a_watson_database_2017
+
+The [Sea around us](http://www.seaaroundus.org/data/#/lme/7?chart=catch-chart&dimension=taxon&measure=tonnage&limit=10) also provides this data for the same LME and is also broken down by species. The main differences are that reported catch is separated from the estimated total catch (which also includes illegal and unreported catch) and the methods of collection and interpolation. The area of the defined LME is 278780 km2.
+
+
+* Clear differences between data sets trends from late 60's though 70s
+* Otherwise similar trends from 80s onward. 
+* The SAU estimates total catch approximately 10% higher post 1980 that that of Link. 
+
+
+```{r linkcatch,echo= F,message=F}
+link2021 <- readr::read_csv(file=here::here("vignettes/JasonLink/NEUS_link2021.csv"),skip = 1, col_names = T,show_col_types = FALSE) %>%
+  dplyr::rename(Link = Landings)
+
+# ggplot2::ggplot(data = neus2021) +
+#   ggplot2::geom_line(mapping=ggplot2::aes(x=Year,y=Landings/1000))+
+#   ggplot2::ylim(0,2600) + 
+#   ggplot2::xlim(1950,2020) +
+#     ggplot2::ylab("Catch (1000 mt)") 
+
+sau <- readr::read_csv(file=here::here("vignettes/JasonLink/SAU/SAU LME 7 v48-0.csv"),skip = 0,
+                       col_names = T,show_col_types = FALSE)
+
+sauAll <- sau %>%
+  dplyr::rename(Year = year) %>%
+  dplyr::group_by(Year) %>%
+  dplyr::summarise(SAUAll = sum(tonnes) )
+  
+sauReported <- sau %>%
+  dplyr::filter(reporting_status == "Reported") %>%
+  dplyr::rename(Year = year) %>%
+  dplyr::group_by(Year) %>%
+  dplyr::summarise(SAUReported = sum(tonnes) )
+  
+sau <- sauAll %>%
+  dplyr::left_join(.,sauReported,by="Year") %>%
+  dplyr::full_join(.,link2021, by = "Year") %>%
+  tidyr::pivot_longer(.,cols=-Year,names_to = "Source",values_to = "Landings")
+
+ggplot2::ggplot(data = sau) +
+  ggplot2::geom_line(mapping=ggplot2::aes(x=Year,y=Landings/1000,color = Source)) + 
+  ggplot2::ylim(0,2600) +
+  ggplot2::xlim(1950,2020) +
+  ggplot2::ylab("Catch (1000 mt)")  
+
+percentDiscards <-  100*sau %>%
+  tidyr::pivot_wider(.,names_from = "Source",values_from = "Landings") %>% 
+  dplyr::mutate(percent=(SAUAll-SAUReported)/SAUAll) %>%
+  dplyr::pull(percent) %>% 
+  mean() 
+
+```
+
+* Mean percentage increase from reported catch to total estimate (SAU data) = `r percentDiscards``
+
+* SAU data is approximately `r 100*sau %>% dplyr::filter(Year >=1980) %>% tidyr::pivot_wider(.,names_from = "Source",values_from = "Landings") %>% dplyr::mutate(percent=(SAUAll-Link)/SAUAll) %>% dplyr::pull(percent) %>% mean(na.rm=T) ` % higher than Link
+
+
+## NEFSC database
+
+The northeast fisheries science center houses commercial fishing data internally. This data is used in stock assessments. The R package `comlandr` provides an interface for easily pulling this data. `comlandr` also pulls foreign data from the NAFO website to obtain estimates of foreign fleets fishing in the NEUS LME. Note that the commercial fishing data currently pulled using `comlandr` only includes reported catch (not discards)
+
+The NEUS LME is defined by the following statistical areas and comprises an area = 281702 km2.
+
+* Georges Bank (`r comlandr::EPUs$GB$StatAreas`)
+* Mid Atlantic Bight (`r comlandr::EPUs$MAB$StatAreas`)
+* Gulf of Maine (`r comlandr::EPUs$GOM$StatAreas`)
+
+NAFO has different designations for fishing areas. The Divisions that represent the NEUS LME are defined below
+
+* The total reported catch is less that 50% of what is reported by the SAU/Link
+ 
+```{r comland,echo= F,fig.cap="Reported landings, from comlandr, for the NEUS separated by data source"}
+  comlandData <- dplyr::as_tibble(readRDS(here::here("data",paste0("comland_meatwt_deflated_EPU_2020.Rds"))))
+  comlandSep <- comlandData %>%
+    dplyr::filter(EPU %in% c("GB","GOM","MAB"))  %>% # US and NAFO landings
+    dplyr::rename(Year = YEAR) %>%
+    dplyr::group_by(Year,US) %>%
+    dplyr::summarise(Landings = sum(SPPLIVMT), .groups="drop") %>%
+    dplyr::rename(Source = US) %>%
+    dplyr::mutate(Source = dplyr::case_when(Source==T ~ "USA",TRUE ~ "Foreign"))
+  
+  comland <- comlandSep %>%
+    dplyr::group_by(Year) %>%
+    dplyr::summarise(Landings = sum(Landings))
+
+  comlandAll <- comland %>%
+    dplyr::mutate(Source = "Comland") %>%
+    rbind(comlandSep) %>%
+    dplyr::arrange(Year)
+
+  ggplot2::ggplot(data = comlandAll) +
+  ggplot2::geom_line(mapping=ggplot2::aes(x=Year,y=Landings/1000,color = Source)) + 
+  ggplot2::ylim(0,2600) +
+  ggplot2::xlim(1950,2020) +
+  ggplot2::ylab("Catch (1000 mt)") 
+  
+```
+
+
+## NAFO data US/foreign split
+
+NAFO data contains USA catch until 1994 after which the USA data is considered incomplete since it was reported sparsely. Data are stored in two different databases determined by the level of reporting information. A [Comparison](https://noaa-edab.github.io/comlandr/articles/ForeignCatch.html) of the two databases show that they are almost identical. Data from 21A is used below. 
+
+The following division codes we used to represent the NEUS LME
+
+* 47,51,52,53,61,62,63 (Division codes)
+* 4X, 5Y, 5ZE, 5ZW, 6A, 6B, 6C (equivalently Zones)
+
+USA reported catch (country code = 22) is separated from foreign catch
+
+* Large discrepancy between `comlandr` reported landings and NAFO reported landings for USA. This is explained below.
+
+```{r nafo,echo= F , message=F}
+NEUSDivs <- c(47, 51:56, 61:63)
+NAFODivs <- c("4X", "5Y", "5ZE", "5ZW", "6A", "6B", "6C")
+
+nafo21a <- readr::read_csv(system.file("extdata","21A.csv",package="comlandr"),show_col_types = F) %>%
+  dplyr::filter(Division %in% NAFODivs)
+
+nafo <- nafo21a %>%
+  dplyr::filter(Division %in% NAFODivs) %>%
+  dplyr::group_by(Year) %>%
+  dplyr::summarise(Landings = sum(`Metric Tonnes`))
+
+nafo21aUSA <- nafo21a %>%
+  dplyr::filter(grepl("USA",Country)) %>%
+  dplyr::group_by(Year) %>%
+  dplyr::summarise(USA = sum(`Metric Tonnes`),.groups="drop")
+
+nafo21aForeign <- nafo21a %>%
+  dplyr::filter(!grepl("USA",Country)) %>%
+  dplyr::group_by(Year) %>%
+  dplyr::summarise(Foreign = sum(`Metric Tonnes`),.groups="drop")
+
+nafo21aAll <- nafo21aUSA %>%
+  dplyr::full_join(.,nafo21aForeign,by = "Year") %>% 
+  dplyr::full_join(.,comland,by="Year") %>%
+  dplyr::rename(Comland = Landings) %>%
+  tidyr::pivot_longer(.,cols=-Year,names_to = "Source",values_to = "Landings")
+
+ggplot2::ggplot(data = nafo21aAll) +
+  ggplot2::geom_line(mapping=ggplot2::aes(x=Year,y=Landings/1000,color=Source)) + 
+  ggplot2::ylim(0,2600) +
+  ggplot2::xlim(1950,2020) +
+  ggplot2::ylab("Catch (1000 mt)") +
+  ggplot2::ggtitle("21A")
+
+## 21B
+
+# nafosplit <- comlandr::get_foreign_data(removeUSA = F,aggregateCountry = F)
+# 
+# 
+# nafo <- nafosplit %>%
+#   dplyr::filter(Divcode %in% NEUSDivs) %>%
+#   dplyr::group_by(Year) %>%
+#   dplyr::summarise(Landings = sum(SPPLIVMT))
+# 
+# 
+# nafosplit <- nafosplit %>% 
+#   dplyr::filter(Divcode %in% NEUSDivs) %>% 
+#   dplyr::group_by(Year,Country) %>% 
+#   dplyr::summarise(Landings = sum(SPPLIVMT),.groups="drop")
+# 
+# nafousa <- nafosplit %>% 
+#   dplyr::filter(Country == 22) %>%
+#   dplyr::select(-Country) %>% 
+#   dplyr::rename(USA = Landings)
+# 
+# nafoforeign <- nafosplit %>%
+#   dplyr::filter(!(Country == 22)) %>%
+#   dplyr::group_by(Year) %>%
+#   dplyr::summarise(Foreign = sum(Landings),.groups="drop")
+# 
+# nafoCombined <- nafousa %>%
+#   dplyr::full_join(.,nafoforeign,by="Year") %>% 
+#   dplyr::full_join(.,comland,by="Year") %>%
+#   dplyr::rename(Comland = Landings) %>%
+#   tidyr::pivot_longer(.,cols=-Year,names_to = "Source",values_to = "Landings")
+# 
+#   ggplot2::ggplot(data = nafoCombined) +
+#   ggplot2::geom_line(mapping=ggplot2::aes(x=Year,y=Landings/1000,color=Source)) + 
+#   ggplot2::ylim(0,2600) +
+#   ggplot2::xlim(1950,2020) +
+#   ggplot2::ylab("Catch (1000 mt)") +
+#     ggplot2::ggtitle("21B")
+
+  
+
+```
+
+## NAFO: USA reported landings
+
+What does the composition of the USA portion of the NAFO data look like?
+Is this due to Chesapeake bay? The main contributors to the catch are
+
+* Atlantic Menhaden 
+* American Cupped Oyster
+* Blue Crab
+* Hard Clam
+* Ocean Quahog
+* Sea Scallop
+* Surf clam
+
+So why are these differences present?
+
+```{r nafousa, echo = F, fig.cap="Contribution of species catch by the USA reported to NAFO" }
+NEUSDivs <- c(47, 51:56, 61:63)
+NAFODivs <- c("4X", "5Y", "5ZE", "5ZW", "6A", "6B", "6C")
+
+nafo21a <- readr::read_csv(system.file("extdata","21A.csv",package="comlandr"),show_col_types = F) %>%
+  dplyr::filter(Division %in% NAFODivs)
+
+nafo21aUSA <- nafo21a %>%
+  dplyr::filter(grepl("USA",Country)) %>%
+  dplyr::rename(StockName = `Species Name`) %>%
+  dplyr::group_by(Year,StockName) %>%
+  dplyr::summarise(Landings = sum(`Metric Tonnes`),.groups="drop")
+
+p <- ggplot2::ggplot(nafo21aUSA,ggplot2::aes(x=Year,y=Landings/1000, fill=StockName)) + 
+  ggiraph::geom_bar_interactive(width = 0.95, stat = "identity", show.legend = FALSE,
+                                ggplot2::aes(tooltip = StockName, data_id = StockName)) +
+  ggplot2::ylab("Catch (1000 mt)")
+
+ggiraph::ggiraph(code=print(p))
+
+```
+
+## Stocksmart
+
+All data from federally managed species in the Northeast can be accessed from the [Stock SMART](https://www.st.nmfs.noaa.gov/stocksmart?app=homepage) website or via the R package [`stocksmart`](https://noaa-edab.github.io/stocksmart/). Comparing stock SMART data to `comlandr` we find an overall agreement in terms of total Catch.
+
+```{r stocksmart, echo = F}
+stocksmart <- stocksmart::stockAssessmentData %>%
+  dplyr::filter(RegionalEcosystem == "Northeast Shelf",Metric == "Catch") %>%
+  dplyr::group_by(StockName) %>%
+  dplyr::filter(AssessmentYear == max(AssessmentYear)) %>%
+  dplyr::mutate(Catchmt = dplyr::case_when(Units == "Thousand Metric Tons" ~ Value*1000, TRUE ~ Value)) %>%
+  dplyr::group_by(Year) %>%
+  dplyr::summarise(stocksmart = sum(Catchmt),.groups="drop")
+  
+# combine with comlandr
+
+NEcatch <- comland %>%
+  dplyr::full_join(.,stocksmart,by="Year") %>%
+  dplyr::rename(comland=Landings) %>% 
+  tidyr::pivot_longer(.,cols=-Year,values_to = "Landings",names_to = "Source")
+
+
+ggplot2::ggplot(data=NEcatch) + 
+  ggplot2::geom_line(ggplot2::aes(x=Year, y=Landings/1000,color=Source)) +
+  ggplot2::ylim(0,2600) +
+  ggplot2::xlim(1950,2020) +
+  ggplot2::ylab("Catch (1000 mt)") 
+
+
+```
+
+## All data sources
+
+To get a better idea of the differences and similarities between the data sources we plot all together.
+
+Note: Link data, SAU data, and NAFO data are estimates of Catch whereas `comlandr` data is landings only (no discards)
+
+
+```{r combine, echo = F, message=F}
+
+combined <- sauAll %>% 
+  dplyr::left_join(.,sauReported,by="Year") %>% 
+  dplyr::left_join(.,link2021,by="Year") %>% 
+  dplyr::left_join(.,comland,by="Year") %>%
+  dplyr::rename(Comland = Landings) %>%
+  dplyr::left_join(.,nafo,by="Year") %>%
+  dplyr::rename(NAFO = Landings) %>% 
+  tidyr::pivot_longer(.,cols=-Year,names_to = "Source",values_to = "Landings")
+  
+  ggplot2::ggplot(data = combined) +
+  ggplot2::geom_line(mapping=ggplot2::aes(x=Year,y=Landings/1000,color=Source)) + 
+  ggplot2::ylim(0,2600) +
+  ggplot2::xlim(1950,2020) + 
+  ggplot2::ylab("Landings/Catch (mt)")  
+
+```
+
+
+## Ecosystem overfishing indices
+
+Several ecosystem overfishing indices (Ryther, Fogarty, Friedland) have been proposed (@link_global_2019) along with specified reference points relating to the health of the system. The implications of incomplete accounting of catch are apparent when assessing ecosystem health using these indices.
+
+For example, the Ryther index is calculated as catch per unit area.
+Assuming the area of the NEUS LME is approximately 280,000 km2. The following plot demonstrates how ones conclusion regarding ecosystem health will differ depending on the data source.
+
+From @link_global_2019: "... to maintain catches at a level above ∼ 3tkm–2 yr–1 (i.e. levels of excessive EOF) requires an incredibly productive ecosystem, which is not sustainable in the long-term "
+
+
+The estimated percentage of unreported catch from the SAU dataset is applied to comland data estimate to represent total comland catch.
+
+```{r ryther, echo =F, message = F}
+area <- 280000
+rather <- combined
+rather$Landings <- combined$Landings/area
+
+rather <- rather %>%
+  dplyr::mutate(Landings = dplyr::case_when(Source == "Comland" ~ Landings*(1 + percentDiscards/100),TRUE ~ Landings))
+
+
+  ggplot2::ggplot(data = rather %>% dplyr::filter(!(Source == "NAFO"))) +
+  ggplot2::geom_line(mapping=ggplot2::aes(x=Year,y=Landings,color=Source)) + 
+  #ggplot2::ylim(0,2200000) +
+  ggplot2::xlim(1950,2020) + 
+  ggplot2::ylab("Landings/Catch (mt)")  + 
+    ggplot2::geom_hline(yintercept = 0.3,linetype="dashed",color="green")+
+    ggplot2::geom_hline(yintercept = 1.1,linetype="dashed",color = "green")+
+    ggplot2::geom_hline(yintercept = 3,linetype="dashed",color="red")+
+    ggplot2::geom_hline(yintercept = 5,linetype="dashed",color="red")
+
+
+```
+
+
+
+## References
+
