@@ -1,7 +1,9 @@
 ---
 title: "Comparison of Landings/Catch data"
 output:
-  bookdown::html_document2: default
+  bookdown::html_document2: 
+    code_fold: hide
+    number_Sections: false
 bibliography: references.bib
 link-citations: yes
 csl: apa-annotated-bibliography.csl
@@ -13,7 +15,7 @@ library(magrittr)
 options(warn = -1) 
 ```
 
-We investigate the landings/catch time series for the Northeast USA Large Marine Ecosystem (NEUS LME). Data sources include:
+We investigate the landings/catch time series for the Northeast US Shelf Large Marine Ecosystem (NEUS LME). Data sources include:
 
 * @link_evidence_2021 uses data from @reg_a_watson_database_2017 
 * [Sea around us](http://www.seaaroundus.org/data/#/lme/7?chart=catch-chart&dimension=taxon&measure=tonnage&limit=10)
@@ -37,12 +39,6 @@ The [Sea around us](http://www.seaaroundus.org/data/#/lme/7?chart=catch-chart&di
 ```{r linkcatch,echo= F,message=F,fig.cap=""}
 link2021 <- readr::read_csv(file=here::here("vignettes/JasonLink/NEUS_link2021.csv"),skip = 1, col_names = T,show_col_types = FALSE) %>%
   dplyr::rename(Link = Landings)
-
-# ggplot2::ggplot(data = neus2021) +
-#   ggplot2::geom_line(mapping=ggplot2::aes(x=Year,y=Landings/1000))+
-#   ggplot2::ylim(0,2600) + 
-#   ggplot2::xlim(1950,2020) +
-#     ggplot2::ylab("Catch (1000 mt)") 
 
 sau <- readr::read_csv(file=here::here("vignettes/JasonLink/SAU/SAU LME 7 v48-0.csv"),skip = 0,
                        col_names = T,show_col_types = FALSE)
@@ -167,44 +163,6 @@ ggplot2::ggplot(data = nafo21aAll) +
   ggplot2::ylab("Catch (1000 mt)") +
   ggplot2::ggtitle("21A")
 
-## 21B
-
-# nafosplit <- comlandr::get_foreign_data(removeUSA = F,aggregateCountry = F)
-# 
-# 
-# nafo <- nafosplit %>%
-#   dplyr::filter(Divcode %in% NEUSDivs) %>%
-#   dplyr::group_by(Year) %>%
-#   dplyr::summarise(Landings = sum(SPPLIVMT))
-# 
-# 
-# nafosplit <- nafosplit %>% 
-#   dplyr::filter(Divcode %in% NEUSDivs) %>% 
-#   dplyr::group_by(Year,Country) %>% 
-#   dplyr::summarise(Landings = sum(SPPLIVMT),.groups="drop")
-# 
-# nafousa <- nafosplit %>% 
-#   dplyr::filter(Country == 22) %>%
-#   dplyr::select(-Country) %>% 
-#   dplyr::rename(USA = Landings)
-# 
-# nafoforeign <- nafosplit %>%
-#   dplyr::filter(!(Country == 22)) %>%
-#   dplyr::group_by(Year) %>%
-#   dplyr::summarise(Foreign = sum(Landings),.groups="drop")
-# 
-# nafoCombined <- nafousa %>%
-#   dplyr::full_join(.,nafoforeign,by="Year") %>% 
-#   dplyr::full_join(.,comland,by="Year") %>%
-#   dplyr::rename(Comland = Landings) %>%
-#   tidyr::pivot_longer(.,cols=-Year,names_to = "Source",values_to = "Landings")
-# 
-#   ggplot2::ggplot(data = nafoCombined) +
-#   ggplot2::geom_line(mapping=ggplot2::aes(x=Year,y=Landings/1000,color=Source)) + 
-#   ggplot2::ylim(0,2600) +
-#   ggplot2::xlim(1950,2020) +
-#   ggplot2::ylab("Catch (1000 mt)") +
-#     ggplot2::ggtitle("21B")
 
   
 
@@ -215,18 +173,18 @@ ggplot2::ggplot(data = nafo21aAll) +
 What does the composition of the USA portion of the NAFO data look like?
 The main contributors to the catch are
 
-* Atlantic Menhaden 
-* American Cupped Oyster
-* Blue Crab
-* Hard Clam
-* Ocean Quahog
-* Sea Scallop
-* Surf clam
+* Atlantic Menhaden (221)
+* American Cupped Oyster (CRASSOSTREA VIRGINICA, Eatern Oyster, 789)
+* Blue Crab (700)
+* Hard Clam (MERCENARIA MERCENARIA, Northern Clam, 748)
+* Ocean Quahog (754)
+* Sea Scallop (800)
+* Surf clam (769)
 
 Menhaden are a large portion of catch in the NEUS but `comlandr` currently doesn't include them since the data is managed elsewhere. Some of the shellfish species are possibly being caught
 in the Chesapeake bay which is also not accounted for in `comlandr`.
 
-This discrepency needs to be resolved
+This discrepancy needs to be resolved
 
 ```{r nafousa, echo = F, fig.cap="Contribution of species catch by the USA reported to NAFO" }
 NEUSDivs <- c(47, 51:56, 61:63)
@@ -244,11 +202,47 @@ nafo21aUSA <- nafo21a %>%
 p <- ggplot2::ggplot(nafo21aUSA,ggplot2::aes(x=Year,y=Landings/1000, fill=StockName)) + 
   ggiraph::geom_bar_interactive(width = 0.95, stat = "identity", show.legend = FALSE,
                                 ggplot2::aes(tooltip = StockName, data_id = StockName)) +
-  ggplot2::ylab("Catch (1000 mt)")
+  ggplot2::ylab("Catch (1000 mt)") +
+      ggplot2::ylim(0,2600) +
+    ggplot2::xlim(1950,2020)
 
 ggiraph::ggiraph(code=print(p))
 
 ```
+
+## Abundance of main contributors in NESFC
+
+Composition of landings of these main NAFO contributors in NEFSC data base
+
+```{r contribs}
+
+otherSpecies <- soenotes::otherSpecies
+  
+  p <- ggplot2::ggplot(otherSpecies,ggplot2::aes(x=Year,y=Landings/1000, fill=speciesNames)) + 
+    ggiraph::geom_bar_interactive(width = 0.95, stat = "identity", show.legend = TRUE,
+                                  ggplot2::aes(tooltip = speciesNames, data_id = speciesNames)) +
+    ggplot2::ylab("Catch (1000 mt)") +
+        ggplot2::ylim(0,2600) +
+    ggplot2::xlim(1950,2020)
+  
+  ggiraph::ggiraph(code=print(p))
+
+```
+
+## Menhaden in NEFSC database
+
+```{r menhaden, echo =F}
+# pull menhaden from AA tables
+menhaden <- soenotes::menhaden
+
+  ggplot2::ggplot(menhaden) +
+  ggplot2::geom_line(ggplot2::aes(x=Year,y=Landings/1000,color=EPU)) +
+    ggplot2::ylim(0,2600) +
+    ggplot2::xlim(1950,2020) +
+    ggplot2::ylab("Catch (1000 mt)")  
+
+```
+
 
 ## Stocksmart
 
