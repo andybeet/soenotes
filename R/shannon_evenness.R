@@ -2,7 +2,11 @@
 #'
 #' Demonstrate some of the issues in interpreting changes in the index
 #' Evenness in p's
+#' @param nSim numeric. Number of simulations
+#' @param nspV numeric vector. Number of entities to simulate
 #'
+#'
+#' @export
 
 shannon_evenness <- function(nSim = 1000, nspV=10:20) {
 

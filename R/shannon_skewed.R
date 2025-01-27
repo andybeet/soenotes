@@ -4,7 +4,12 @@
 #'
 #' Sampling ps sequentially from uniform subject to sum(p) = 1
 #' Skews to top heavy populations
-
+#' @param nSim numeric. Number of simulations
+#' @param nspV numeric vector. Number of entities to simulate
+#'
+#'
+#' @export
+#'
 shannon_skewed <- function(nSim = 1000, nspV=10:20) {
 
 insp <- 0

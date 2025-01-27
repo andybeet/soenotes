@@ -12,8 +12,7 @@ csl: apa-annotated-bibliography.csl
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 options(warn = -1) 
-source("~/myWork/githubRepos/soenotes/R/shannonTest1.R")
-source("~/myWork/githubRepos/soenotes/R/shannonTest2.R")
+library(soenotes)
 ```
 
 A note about making inferences on changes in direction of diversity indices, in particular the Shannon Index
