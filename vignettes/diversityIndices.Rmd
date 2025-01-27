@@ -83,13 +83,15 @@ This random sampling is akin to having a few entities dominant in the system and
 
 ### Complete 
 
-As can be seen by combining the above two methods of sampling there is a large part of the parameter space that is not being adequately sampled i.e the distribtuion of probabilities that result in values of the Shannon Index that exceed the value of 2 but are less than the lower tail of evenness.
+As can be seen by combining the above two methods of sampling there is a large part of the parameter space that is not being adequately sampled i.e the distribution of probabilities that result in values of the Shannon Index that exceed the value of 2 but are less than the lower tail of evenness.
 
 Ideally we need a good method of simulating the full parameter space
 
 ## Conclusion
 
 Inferences on the community structure, based on changes in this index, can not be made without deeper investigation into the composition of the entities that make up the system
+
+Note: a reduction in n can be thought of as $p_i -> 0$ for any of the entities.
 
 
 ## References
