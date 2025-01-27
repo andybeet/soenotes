@@ -1,0 +1,96 @@
+---
+title: "Diversity Indices"
+output:
+  bookdown::html_document2: 
+    code_fold: hide
+    number_sections: false
+bibliography: references.bib
+link-citations: yes
+csl: apa-annotated-bibliography.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(warn = -1) 
+source("~/myWork/githubRepos/soenotes/R/shannonTest1.R")
+source("~/myWork/githubRepos/soenotes/R/shannonTest2.R")
+```
+
+A note about making inferences on changes in direction of diversity indices, in particular the Shannon Index
+
+$$Index = -\sum_{i = 1}^np_ilog(p_i)$$
+where $n$ is the number of entities, $\sum p_i = 1$ and $p_i$ is the proportion of entity $i$'s contribution to the whole. This could be the proportion of species $i$'s biomass in the system, the proportion of total catch from species $i$, the proportion of fleet $i$'s revenue, effort etc.
+
+## Properties of the index
+
+The maximum value of the index is when when the system is evenly distributed, i.e. $p_i = 1/n$ for all $i$. This maximum increases as n increases
+
+```{r maxes, echo = T,eval=T}
+shannon <- NULL
+nV <- 1:20
+for(n in nV) {
+  p <- rep(1/n,n)
+  shannon[n] <- -sum(p*log(p))
+}
+plot(nV,shannon,type="l",xlab = "Number of Species",ylab = "Shannon Index")
+
+
+```
+
+## Simulation study
+
+Can you make inferences based on the decline or increase in such an index over time if n remains unchanged? What about if n changes over time?
+
+To investigate we need to simulate n probabilities conditional on their sum being equal to 1. We can do this in several ways, each way resulting in different distributional properties.
+
+1. Simulate n uniform [0,1] random variables and divide by the sum (This will result in more even like probabilities)
+2. Simulate n uniform random variables sequentially conditional on the previous value (This will result in more skewed, top heavy, distribution of probablites)
+3. ?
+
+### Eveneness
+
+Let $X_i = U[0,1]$
+
+Define $$p_i = \frac{X_i}{\sum_{j = 1}^nX_j}$$
+Simulate 1000 samples for a range of n's.
+
+```{r even, eval = T, echo = T}
+p1 <- shannon_evenness(nSim = 1000,nspV=10:20)
+plot(p1)
+```
+
+One can see that there is a significant amount of overlap between distributions making any conclusions about, lets say, a decline in the index complicated. It could be due to a reduction in the number of species or a reorganization of the entities in the system or a combination of both. And this is under the assumption that all entities are simulated somewhat evenly.
+
+### Skewed
+
+Let $X_1 = U[0,1]$
+Then define:.
+
+$X_2 = U[0,1-x_1]$
+
+$X_3 = U[0,1-x_1-x_2]$ ...
+
+$x_n = 1-\sum{x_i}$
+
+Simulate 1000 samples for a range of n's
+
+```{r skew, eval = T, echo = T}
+p1 <- shannon_skewed(nSim = 1000,nspV=10:20)
+plot(p1)
+```
+
+This random sampling is akin to having a few entities dominant in the system and all others insignificant. Under this sampling all distributions look similar. Very little inference could be made.
+
+### Complete 
+
+As can be seen by combining the above two methods of sampling there is a large part of the parameter space that is not being adequately sampled i.e the distribtuion of probabilities that result in values of the Shannon Index that exceed the value of 2 but are less than the lower tail of evenness.
+
+Ideally we need a good method of simulating the full parameter space
+
+## Conclusion
+
+Inferences on the community structure, based on changes in this index, can not be made without deeper investigation into the composition of the entities that make up the system
+
+
+## References
+
