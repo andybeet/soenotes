@@ -27,5 +27,5 @@ Suggests:
     readr,
     bookdown
 Remotes:
-    NOAA-EDAB/comlandr,
+    NOAA-EDAB/comlandr@andy_unknows,
     NOAA-EDAB/stocksmart
