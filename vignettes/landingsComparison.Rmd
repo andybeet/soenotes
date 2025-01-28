@@ -1,9 +1,10 @@
 ---
 title: "Comparison of Landings/Catch data"
-output:
-  bookdown::html_document2: 
-    code_fold: hide
-    number_Sections: false
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Comparison of Landings/Catch data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 bibliography: references.bib
 link-citations: yes
 csl: apa-annotated-bibliography.csl
@@ -250,7 +251,7 @@ ggiraph::girafe(code=print(p))
 
 Composition of landings of these main NAFO contributors in NEFSC data base
 
-```{r contribs}
+```{r contribs, echo=F, eval = T}
 
 otherSpecies <- soenotes::otherSpecies
   
