@@ -78,7 +78,7 @@ p1 <- shannon_skewed(nSim = 1000,nspV=10:20)
 plot(p1)
 ```
 
-This random sampling is akin to having a few entities dominant in the system and all others insignificant. Under this sampling all distributions look similar. Very little inference could be made.
+This random sampling is akin to having a few entities dominant in the system and all others insignificant. Under this sampling all distributions look similar. This is due to the fact that all of the systems have many entities with $p_i -> 0$  resulting in effectively similar values of n. Very little inference could be made.
 
 ### Complete 
 
@@ -88,9 +88,10 @@ Ideally we need a good method of simulating the full parameter space
 
 ## Conclusion
 
+There are many publications demonstrating the limitations of these types of diversity metrics (List some of them).
+
 Inferences on the community structure, based on changes in this index, can not be made without deeper investigation into the composition of the entities that make up the system
 
-Note: a reduction in n can be thought of as $p_i -> 0$ for any of the entities.
 
 
 ## References

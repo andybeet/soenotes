@@ -112,6 +112,42 @@ NAFO has different designations for fishing areas. The Divisions that represent 
   
 ```
 
+## comland + menhaden
+
+Plot only available when knitted locally
+
+```{r menloc, echo =F, eval = T}
+
+  ongithub <- tolower(Sys.getenv("GITHUB_ACTIONS")) == "true"
+
+  if(ongithub == F ){
+  
+    men <- readRDS(here::here("data-raw/menhadenEOF.rds"))
+  
+    men <- men %>% 
+      dplyr::group_by(year) %>% 
+      dplyr::summarise(Landings =  sum(NEUScatch)) %>%
+      dplyr::rename(Year = year) %>% 
+      dplyr::mutate(Source = "men")
+    
+    commen <- comland %>% 
+      dplyr::mutate(Source = "comland") %>%
+      rbind(men) 
+    
+    commenAll <- commen %>%
+      dplyr::group_by(Year) %>% 
+      dplyr::summarise(Landings =  sum(Landings)) %>%
+      dplyr::mutate(Source = "All") %>%
+      rbind(commen)
+      
+    
+    ggplot2::ggplot(data = commenAll) +
+    ggplot2::geom_line(mapping=ggplot2::aes(x=Year,y=Landings/1000,color = Source)) + 
+    ggplot2::ylim(0,2600) +
+    ggplot2::xlim(1950,2020) +
+    ggplot2::ylab("Catch (1000 mt)") 
+  }
+```
 
 ## NAFO data US/foreign split
 
@@ -206,7 +242,7 @@ p <- ggplot2::ggplot(nafo21aUSA,ggplot2::aes(x=Year,y=Landings/1000, fill=StockN
       ggplot2::ylim(0,2600) +
     ggplot2::xlim(1950,2020)
 
-ggiraph::ggiraph(code=print(p))
+ggiraph::girafe(code=print(p))
 
 ```
 
@@ -222,8 +258,8 @@ otherSpecies <- soenotes::otherSpecies
     ggiraph::geom_bar_interactive(width = 0.95, stat = "identity", show.legend = TRUE,
                                   ggplot2::aes(tooltip = speciesNames, data_id = speciesNames)) +
     ggplot2::ylab("Catch (1000 mt)") +
-        ggplot2::ylim(0,2600) +
-    ggplot2::xlim(1950,2020)
+    ggplot2::ylim(0,2600) +
+    ggplot2::xlim(1950,2020) 
   
   ggiraph::ggiraph(code=print(p))
 
